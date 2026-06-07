@@ -1,7 +1,7 @@
 import type { Comment } from '../types';
 
 export default function CommentList({ comments }: { comments: Comment[] }) {
-  if (comments.length === 0) return <p>No comments yet. Be the first!</p>;
+  if (comments.length === 0) return <p>暂无评论，来抢沙发！</p>;
   return (
     <div>
       {comments.map(c => (

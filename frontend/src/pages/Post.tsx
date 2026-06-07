@@ -23,7 +23,7 @@ export default function Post() {
     loadComments();
   }, [loadComments]);
 
-  if (!post) return <p>Loading...</p>;
+  if (!post) return <p>加载中…</p>;
 
   return (
     <article>

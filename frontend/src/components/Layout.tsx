@@ -8,10 +8,13 @@ export default function Layout() {
           Jnove&apos;s Blog
         </Link>
         <nav style={{ display: 'flex', gap: '16px', flex: 1 }}>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-          <Link to="/search">Search</Link>
+          <Link to="/">首页</Link>
+          <Link to="/about">关于</Link>
+          <Link to="/search">搜索</Link>
         </nav>
+        <Link to="/admin/login" style={{ fontSize: '14px', opacity: 0.6 }}>
+          管理
+        </Link>
       </header>
       <main style={{ padding: '24px' }}>
         <Outlet />

@@ -28,10 +28,10 @@ export default function CommentForm({ postId, onCommentAdded }: Props) {
 
   return (
     <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
-      <h3>Leave a Comment</h3>
+      <h3>发表评论</h3>
       <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
         <input
-          placeholder="Your name"
+          placeholder="昵称"
           value={authorName}
           onChange={e => setAuthorName(e.target.value)}
           required
@@ -39,7 +39,7 @@ export default function CommentForm({ postId, onCommentAdded }: Props) {
         />
         <input
           type="email"
-          placeholder="Your email (won't be shown)"
+          placeholder="邮箱（不会公开）"
           value={authorEmail}
           onChange={e => setAuthorEmail(e.target.value)}
           required
@@ -47,7 +47,7 @@ export default function CommentForm({ postId, onCommentAdded }: Props) {
         />
       </div>
       <textarea
-        placeholder="Write your comment..."
+        placeholder="写下你的想法…"
         value={content}
         onChange={e => setContent(e.target.value)}
         required
@@ -55,7 +55,7 @@ export default function CommentForm({ postId, onCommentAdded }: Props) {
         style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border)', marginBottom: '12px' }}
       />
       <button type="submit" disabled={submitting} style={{ padding: '8px 24px', cursor: 'pointer' }}>
-        {submitting ? 'Submitting...' : 'Submit'}
+        {submitting ? '提交中…' : '提交评论'}
       </button>
     </form>
   );

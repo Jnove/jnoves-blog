@@ -1,9 +1,9 @@
 export default function About() {
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-      <h1>About</h1>
-      <p>A personal blog for tech articles, notes, and essays.</p>
-      <p>Built with FastAPI + React.</p>
+      <h1>关于</h1>
+      <p>个人技术博客，记录技术文章、笔记与随笔。</p>
+      <p>技术栈：FastAPI + React + SQLite。</p>
     </div>
   );
 }

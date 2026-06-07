@@ -20,11 +20,20 @@ logger = logging.getLogger(__name__)
 
 
 def seed_admin():
-    """如果 admin 用户不存在，则自动创建"""
+    """同步管理员账号：创建或更新为 .env 中配置的用户名/密码，删除其他旧用户"""
     db = SessionLocal()
     try:
-        existing = db.query(User).filter(User.username == ADMIN_USERNAME).first()
-        if not existing:
+        admin = db.query(User).filter(User.username == ADMIN_USERNAME).first()
+        if admin:
+            # 已存在：同步密码和邮箱（防止改了 .env 但数据库没更新）
+            new_hash = hash_password(ADMIN_PASSWORD)
+            if admin.password_hash != new_hash or admin.email != ADMIN_EMAIL:
+                admin.password_hash = new_hash
+                admin.email = ADMIN_EMAIL
+                db.commit()
+                logger.info(f"已同步管理员账号: {ADMIN_USERNAME}")
+        else:
+            # 不存在：创建
             admin = User(
                 username=ADMIN_USERNAME,
                 email=ADMIN_EMAIL,
@@ -33,6 +42,14 @@ def seed_admin():
             db.add(admin)
             db.commit()
             logger.info(f"已创建管理员账号: {ADMIN_USERNAME}")
+
+        # 清理其他遗留用户（不同用户名的旧 admin）
+        others = db.query(User).filter(User.username != ADMIN_USERNAME).all()
+        for u in others:
+            db.delete(u)
+            logger.info(f"已清理旧账号: {u.username}")
+        if others:
+            db.commit()
     finally:
         db.close()
 

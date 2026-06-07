@@ -24,7 +24,7 @@ export default function Home() {
             cursor: 'pointer', fontSize: '14px',
           }}
         >
-          All
+          全部
         </button>
         {tags.map(tag => (
           <button
@@ -41,7 +41,7 @@ export default function Home() {
         ))}
       </div>
       {posts.length === 0 ? (
-        <p>No posts yet.</p>
+        <p>暂无文章</p>
       ) : (
         posts.map(post => <PostCard key={post.id} post={post} />)
       )}
