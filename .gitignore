@@ -12,10 +12,13 @@ backend/ENV/
 
 .vscode/
 .venv/
+.superpowers/
 .env
+*.db
 
 *.debug
 *.sqlite3
 
 *.md
 !*README*.md
+/docs
