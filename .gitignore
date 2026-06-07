@@ -18,6 +18,7 @@ backend/ENV/
 
 *.debug
 *.sqlite3
+frontend/dist/
 
 *.md
 !*README*.md
