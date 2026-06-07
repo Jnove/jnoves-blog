@@ -1,30 +1,25 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Post from './pages/Post';
+import AdminLogin from './pages/AdminLogin';
+import AdminEditor from './pages/AdminEditor';
+import Search from './pages/Search';
+import About from './pages/About';
 
-function App() {
-  const [message, setMessage] = useState<string>('正在连接后端...')
-
-  useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/test')
-      .then(res => {
-        if (res.data.status === 'success') {
-          setMessage(res.data.message)
-        }
-      })
-      .catch(err => {
-        setMessage('连接后端失败，请检查后端是否启动！')
-        console.error(err)
-      })
-  }, [])
-  //投入tailwand css的怀抱
+export default function App() {
   return (
-    <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
-      <h1>Jnove's blog 项目框架</h1>
-      <div style={{ marginTop: '20px', padding: '20px', background: '#f0f2f5', borderRadius: '8px' }}>
-        <strong>后端回应：</strong> {message}
-      </div>
-    </div>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/post/:slug" element={<Post />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/about" element={<About />} />
+        </Route>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/editor" element={<AdminEditor />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
-
-export default App
