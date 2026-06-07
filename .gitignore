@@ -3,8 +3,8 @@ frontend/*.local
 
 backend/logs
 backend/*.log
-backend/__pycache__/
-backend/*.py[cod]
+__pycache__/
+*.py[cod]
 backend/*$py.class
 backend/.venv/
 backend/venv/
