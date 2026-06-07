@@ -1,14 +1,25 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, Integer, String, Text, ForeignKey,
-    UniqueConstraint, Index, DateTime
+    Column, Integer, String, Text, ForeignKey, Boolean,
+    UniqueConstraint, Index, DateTime, Table
 )
 from sqlalchemy.orm import relationship
 
 from .database import Base
 
 
-# 通用混入
+# ---------- 多对多关联表 ----------
+
+blog_tags = Table(
+    "blog_tags",
+    Base.metadata,
+    Column("blog_id", Integer, ForeignKey("blogs.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", Integer, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+# ---------- 通用混入 ----------
+
 class TimestampMixin:
     """自动管理创建和更新时间（UTC时间）的混入类"""
     created_at = Column(
@@ -18,7 +29,7 @@ class TimestampMixin:
         comment="创建时间"
     )
     updated_at = Column(
-        DateTime(timezone=True), #UTC 时间
+        DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
@@ -26,7 +37,8 @@ class TimestampMixin:
     )
 
 
-# 用户 
+# ---------- 用户 ----------
+
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
@@ -35,7 +47,6 @@ class User(Base, TimestampMixin):
     email = Column(String(255), unique=True, index=True, nullable=False, comment="邮箱")
     password_hash = Column(String(255), nullable=False, comment="加密后的密码")
 
-    # 关联关系：一个用户可发表多篇博客、多条评论、多次点赞
     blogs = relationship(
         "Blog", back_populates="author",
         cascade="all, delete-orphan", lazy="select"
@@ -53,13 +64,19 @@ class User(Base, TimestampMixin):
         return f"<User(id={self.id}, username={self.username!r})>"
 
 
-# 博客
+# ---------- 博客 ----------
+
 class Blog(Base, TimestampMixin):
     __tablename__ = "blogs"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False, comment="博客标题")
-    content = Column(Text, nullable=False, comment="博客正文")
+    slug = Column(
+        String(250), unique=True, index=True, nullable=False,
+        comment="URL 友好的唯一标识"
+    )
+    content = Column(Text, nullable=False, comment="博客正文（Markdown/Typst）")
+    published = Column(Boolean, default=False, nullable=False, comment="是否公开发布")
     author_id = Column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -68,7 +85,6 @@ class Blog(Base, TimestampMixin):
         comment="作者ID"
     )
 
-    # 关联关系
     author = relationship("User", back_populates="blogs", lazy="select")
     comments = relationship(
         "Comment", back_populates="blog",
@@ -78,17 +94,40 @@ class Blog(Base, TimestampMixin):
         "Like", back_populates="blog",
         cascade="all, delete-orphan", lazy="select"
     )
+    tags = relationship(
+        "Tag", secondary=blog_tags, back_populates="blogs", lazy="select"
+    )
 
     def __repr__(self):
         return f"<Blog(id={self.id}, title={self.title!r})>"
 
 
-# 评论
+# ---------- 标签 ----------
+
+class Tag(Base, TimestampMixin):
+    __tablename__ = "tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, index=True, nullable=False, comment="标签名")
+    slug = Column(String(50), unique=True, index=True, nullable=False, comment="标签 URL 标识")
+
+    blogs = relationship(
+        "Blog", secondary=blog_tags, back_populates="tags", lazy="select"
+    )
+
+    def __repr__(self):
+        return f"<Tag(id={self.id}, name={self.name!r})>"
+
+
+# ---------- 评论 ----------
+
 class Comment(Base, TimestampMixin):
     __tablename__ = "comments"
 
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False, comment="评论内容")
+    author_name = Column(String(80), nullable=False, comment="评论者昵称")
+    author_email = Column(String(255), nullable=False, comment="评论者邮箱（不公开）")
     blog_id = Column(
         Integer,
         ForeignKey("blogs.id", ondelete="CASCADE"),
@@ -98,21 +137,21 @@ class Comment(Base, TimestampMixin):
     )
     user_id = Column(
         Integer,
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
-        comment="评论者ID"
+        comment="关联注册用户ID（可为空）"
     )
 
-    # 关联关系
     blog = relationship("Blog", back_populates="comments", lazy="select")
     user = relationship("User", back_populates="comments", lazy="select")
 
     def __repr__(self):
-        return f"<Comment(id={self.id}, blog_id={self.blog_id}, user_id={self.user_id})>"
+        return f"<Comment(id={self.id}, blog_id={self.blog_id})>"
 
 
-# 点赞（显式关联实体）
+# ---------- 点赞 ----------
+
 class Like(Base, TimestampMixin):
     __tablename__ = "likes"
 
@@ -130,11 +169,9 @@ class Like(Base, TimestampMixin):
         comment="被点赞博客ID"
     )
 
-    # 关联关系
     user = relationship("User", back_populates="likes", lazy="select")
     blog = relationship("Blog", back_populates="likes", lazy="select")
 
-    # 联合唯一约束：同一用户对同一博客只能点赞一次
     __table_args__ = (
         UniqueConstraint("user_id", "blog_id", name="uq_user_blog_like"),
         Index("ix_likes_user_id", "user_id"),
