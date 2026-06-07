@@ -1,22 +1,43 @@
 """
 FastAPI 应用入口
-启动时自动建表（仅开发环境），
+启动时自动建表并创建管理员账号（仅开发环境），
 注册中间件、路由，管理数据库生命周期。
 """
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine, Base
-from . import models  # 导入模型，确保 Base.metadata 能发现所有表
 
+from .database import engine, Base, SessionLocal
+from . import models
+from .models import User
+from .core.security import hash_password
+from .core.config import ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD
 
-# 日志 
+# 日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# 生命周期 
+def seed_admin():
+    """如果 admin 用户不存在，则自动创建"""
+    db = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.username == ADMIN_USERNAME).first()
+        if not existing:
+            admin = User(
+                username=ADMIN_USERNAME,
+                email=ADMIN_EMAIL,
+                password_hash=hash_password(ADMIN_PASSWORD),
+            )
+            db.add(admin)
+            db.commit()
+            logger.info(f"已创建管理员账号: {ADMIN_USERNAME}")
+    finally:
+        db.close()
+
+
+# 生命周期
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用启动/关闭时的处理逻辑"""
@@ -24,15 +45,16 @@ async def lifespan(app: FastAPI):
     logger.info("正在启动blog system后端...")
     Base.metadata.create_all(bind=engine)
     logger.info("数据库表已确认存在（create_all 仅在开发环境使用）")
+    seed_admin()
 
-    yield 
+    yield
 
     # 关闭阶段
     engine.dispose()
     logger.info("数据库连接池已释放，应用已关闭")
 
 
-# 实例 FastAPI 
+# 实例 FastAPI
 app = FastAPI(
     title="Jonve's Blog System",
     description="一个全栈博客系统的后端 API，支持用户、文章、评论和点赞",
@@ -51,7 +73,12 @@ app.add_middleware(
 )
 
 
-#  路由注册 
+# 路由注册
+from .routers import auth
+
+app.include_router(auth.router)
+
+
 @app.get("/api/test", tags=["system"])
 async def test_api():
     """前端连接测试端点"""
@@ -59,6 +86,7 @@ async def test_api():
         "status": "success",
         "message": "你好，React！我是 FastAPI 后端！",
     }
+
 
 if __name__ == "__main__":
     import uvicorn
