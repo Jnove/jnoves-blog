@@ -74,9 +74,13 @@ app.add_middleware(
 
 
 # 路由注册
-from .routers import auth
+from .routers import auth, posts, comments, tags, search
 
 app.include_router(auth.router)
+app.include_router(posts.router)
+app.include_router(comments.router)
+app.include_router(tags.router)
+app.include_router(search.router)
 
 
 @app.get("/api/test", tags=["system"])
