@@ -28,6 +28,8 @@ class PostSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
     comment_count: int = 0
+    like_count: int = 0
+    views: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -43,6 +45,8 @@ class PostResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     comment_count: int = 0
+    like_count: int = 0
+    views: int = 0
 
     model_config = {"from_attributes": True}
 

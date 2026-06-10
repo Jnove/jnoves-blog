@@ -45,6 +45,7 @@ class User(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False, comment="用户名")
     email = Column(String(255), unique=True, index=True, nullable=False, comment="邮箱")
+    is_admin = Column(Boolean, default=False, nullable=False, comment="是否为管理员")
     password_hash = Column(String(255), nullable=False, comment="加密后的密码")
 
     blogs = relationship(
@@ -77,6 +78,7 @@ class Blog(Base, TimestampMixin):
     )
     content = Column(Text, nullable=False, comment="博客正文（Markdown/Typst）")
     published = Column(Boolean, default=False, nullable=False, comment="是否公开发布")
+    views = Column(Integer, default=0, nullable=False, comment="浏览量")
     author_id = Column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),

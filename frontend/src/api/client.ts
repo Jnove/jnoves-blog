@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Post, PostList, Comment, CommentForm, LoginForm, TokenResponse, Tag, PostSummary } from '../types';
+import type { Post, PostList, Comment, CommentForm, LoginForm, RegisterForm, TokenResponse, Tag, PostSummary, LikeStatus, UserInfo, AdminStats } from '../types';
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
@@ -15,12 +15,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 响应拦截器：401 时清除 token
+// 响应拦截器：401 时清除 token 并通知 AuthContext
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
+      window.dispatchEvent(new Event('auth:logout'));
     }
     return Promise.reject(err);
   }
@@ -68,4 +69,26 @@ export const searchApi = {
 export const authApi = {
   login: (data: LoginForm) =>
     api.post<TokenResponse>('/auth/login', data).then(r => r.data),
+
+  register: (data: RegisterForm) =>
+    api.post<TokenResponse>('/auth/register', data).then(r => r.data),
+
+  me: () =>
+    api.get<UserInfo>('/auth/me').then(r => r.data),
+};
+
+export const likesApi = {
+  check: (blogId: number) =>
+    api.get<LikeStatus>(`/likes/${blogId}`).then(r => r.data),
+
+  like: (blogId: number) =>
+    api.post<LikeStatus>('/likes', { blog_id: blogId }).then(r => r.data),
+
+  unlike: (blogId: number) =>
+    api.delete<LikeStatus>(`/likes/${blogId}`).then(r => r.data),
+};
+
+export const adminApi = {
+  stats: () =>
+    api.get<AdminStats>('/admin/stats').then(r => r.data),
 };

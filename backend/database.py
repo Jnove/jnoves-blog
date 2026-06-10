@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./blog.db"
+    "sqlite:///./backend/blog.db"
 )
 
 _connect_args = {}

@@ -1,6 +1,6 @@
 # Jnove's Blog
 
-个人技术博客系统，支持 Markdown / Typst 写作，带有评论和全文搜索功能。
+个人技术博客系统，支持 Markdown / Typst 写作，带有评论、点赞和全文搜索功能。
 
 **技术栈**：FastAPI + SQLAlchemy + React 19 + TypeScript + Vite
 
@@ -18,13 +18,15 @@ jnoves-blog/
 │   │   ├── config.py         # 环境变量配置（JWT、Admin 账号）
 │   │   └── security.py       # 密码哈希、JWT 签发/验证、认证依赖
 │   ├── routers/
-│   │   ├── auth.py           # POST /api/auth/login
+│   │   ├── auth.py           # 注册、登录、获取当前用户
 │   │   ├── posts.py          # /api/posts CRUD
 │   │   ├── comments.py       # /api/comments 评论
+│   │   ├── likes.py          # /api/likes 点赞
+│   │   ├── admin.py          # /api/admin/stats 管理后台
 │   │   ├── tags.py           # GET /api/tags
 │   │   └── search.py         # GET /api/search
 │   └── schemas/
-│       ├── auth.py           # LoginRequest, TokenResponse
+│       ├── auth.py           # LoginRequest, RegisterRequest, TokenResponse, UserResponse
 │       ├── post.py           # PostCreate/Update/Response/Summary/List
 │       ├── comment.py        # CommentCreate/Response
 │       └── tag.py            # TagResponse
@@ -32,18 +34,24 @@ jnoves-blog/
 │   └── src/
 │       ├── api/client.ts     # Axios 实例 + API 函数
 │       ├── types/index.ts    # TypeScript 类型定义
+│       ├── contexts/
+│       │   └── AuthContext.tsx  # 全局认证状态管理
 │       ├── components/       # 通用组件
 │       │   ├── Layout.tsx    # 全局布局（导航栏 + 内容区）
 │       │   ├── PostCard.tsx  # 文章卡片
 │       │   ├── CommentList.tsx
-│       │   └── CommentForm.tsx
+│       │   ├── CommentForm.tsx
+│       │   └── AdminRoute.tsx  # 管理员路由守卫
 │       ├── pages/            # 页面
-│       │   ├── Home.tsx      # 首页（文章列表 + 标签过滤）
-│       │   ├── Post.tsx      # 文章详情 + 评论区
+│       │   ├── Home.tsx      # 首页（文章列表 + 标签过滤 + 分页）
+│       │   ├── Post.tsx      # 文章详情（Markdown 渲染 + 评论区 + 点赞）
+│       │   ├── Login.tsx     # 用户登录
+│       │   ├── Register.tsx  # 用户注册
 │       │   ├── About.tsx     # 关于页
 │       │   ├── Search.tsx    # 全文搜索
 │       │   ├── AdminLogin.tsx
-│       │   └── AdminEditor.tsx
+│       │   ├── AdminEditor.tsx
+│       │   └── AdminDashboard.tsx  # 管理仪表盘
 │       ├── App.tsx           # React Router 路由
 │       └── main.tsx          # 入口
 ├── docs/superpowers/         # 设计文档与实现计划
@@ -99,18 +107,46 @@ cd frontend && npm run dev
 
 ## API 端点一览
 
+### 认证
+
 | 方法 | 路径 | 认证 | 说明 |
 |------|------|------|------|
-| POST | `/api/auth/login` | 无 | 管理员登录，返回 JWT |
+| POST | `/api/auth/register` | 无 | 用户注册，返回 JWT |
+| POST | `/api/auth/login` | 无 | 用户登录，返回 JWT |
+| GET | `/api/auth/me` | 用户 | 获取当前登录用户信息 |
+
+### 文章
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
 | GET | `/api/posts?page=&size=&tag=` | 无 | 文章列表（分页+标签过滤，仅公开文章） |
-| GET | `/api/posts/{slug}` | 无 | 文章详情 |
+| GET | `/api/posts/{slug}` | 无 | 文章详情（自动增加阅读量） |
 | POST | `/api/posts` | Admin | 创建文章 |
 | PUT | `/api/posts/{slug}` | Admin | 更新文章 |
 | DELETE | `/api/posts/{slug}` | Admin | 删除文章 |
+
+### 评论
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
 | GET | `/api/comments?post_id=` | 无 | 获取文章评论 |
-| POST | `/api/comments` | 无 | 发表评论（需昵称+邮箱） |
+| POST | `/api/comments` | 用户 | 发表评论（使用登录账号身份） |
+
+### 点赞
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
+| POST | `/api/likes` | 用户 | 点赞 |
+| DELETE | `/api/likes/{blog_id}` | 用户 | 取消点赞 |
+| GET | `/api/likes/{blog_id}` | 可选 | 查询点赞状态（登录用户可查自己是否已赞） |
+
+### 其他
+
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
 | GET | `/api/tags` | 无 | 全部标签 |
 | GET | `/api/search?q=` | 无 | 全文搜索（标题+正文） |
+| GET | `/api/admin/stats` | Admin | 管理后台统计数据 |
 
 ---
 
@@ -118,26 +154,30 @@ cd frontend && npm run dev
 
 ```
 User ──1:N──> Blog ──1:N──> Comment
-  │              │
-  └──1:N──> Like │
-                 │
+  │    │         │
+  │    │         └──1:N──> Like
+  │    │
+  └────┴──1:N──> Like
+
 Blog ──M:N──> Tag  (blog_tags 关联表)
 ```
 
-- **User**：管理员账号，启动时自动创建/同步
-- **Blog**：文章，支持 slug、标签、公开/草稿状态，使用 UTC 时间戳
-- **Comment**：评论，含昵称（公开）和邮箱（不公开）
+- **User**：用户账号，含 `is_admin` 区分管理员和普通用户，管理员启动时自动创建/同步
+- **Blog**：文章，支持 slug、标签、公开/草稿状态、浏览量统计，使用 UTC 时间戳
+- **Comment**：评论，关联注册用户，从登录 token 自动获取身份信息
 - **Tag**：标签，与文章多对多关联
-- **Like**：点赞模型已定义，API 待后续开放
+- **Like**：点赞，user_id + blog_id 联合唯一约束
 
 ---
 
 ## 特性
 
-- 🔐 **JWT 认证**：单一管理员，无注册流程，`.env` 配置账号
-- 📝 **文章管理**：Markdown / Typst 写作，草稿/发布切换
-- 🏷️ **标签系统**：多标签，按标签筛选文章
-- 💬 **评论系统**：公开可读，访客可发（昵称+邮箱）
+- 🔐 **JWT 认证**：用户注册/登录，管理员角色分离，AuthContext 持久化登录态
+- 📝 **文章管理**：Markdown 渲染，草稿/发布切换，浏览量统计，标签系统
+- ❤️ **点赞功能**：登录用户可点赞/取消，实时数量展示
+- 💬 **评论系统**：登录后以账号身份评论，无需重复填写昵称邮箱
+- 📊 **管理仪表盘**：文章总数、已发布数、评论数、标签数、总阅读量统计
+- 📄 **分页浏览**：首页文章列表支持分页和标签筛选
 - 🔍 **全文搜索**：基于 SQL LIKE 的文章搜索
 - 🌓 **明暗主题**：CSS 变量驱动的 light/dark 自适应
 - 🌐 **中文界面**：全站中文本地化

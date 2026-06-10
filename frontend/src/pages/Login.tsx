@@ -1,31 +1,17 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function AdminLogin() {
+export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isAdmin, isAuthenticated, loading } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && isAdmin) {
-      navigate('/admin');
-    }
-  }, [loading, isAdmin, navigate]);
-
-  if (loading) return <p style={{ padding: '24px' }}>加载中…</p>;
-
-  // 已登录但不是管理员 → 无权限提示
-  if (isAuthenticated && !isAdmin) {
-    return (
-      <div style={{ maxWidth: '400px', margin: '60px auto', textAlign: 'center' }}>
-        <h1>无权访问</h1>
-        <p>当前账号不是管理员，无法访问管理后台。</p>
-        <p><Link to="/">← 返回首页</Link></p>
-      </div>
-    );
+  if (isAuthenticated) {
+    navigate('/');
+    return null;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -33,8 +19,7 @@ export default function AdminLogin() {
     setError('');
     try {
       await login(username, password);
-      // login 成功后 useAuth 会自动更新 user/isAdmin
-      navigate('/admin');
+      navigate('/');
     } catch {
       setError('登录失败，请检查用户名和密码。');
     }
@@ -42,7 +27,7 @@ export default function AdminLogin() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '60px auto' }}>
-      <h1>管理员登录</h1>
+      <h1>用户登录</h1>
       <form onSubmit={handleSubmit}>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         <div style={{ marginBottom: '12px' }}>
@@ -67,7 +52,7 @@ export default function AdminLogin() {
         <button type="submit" style={{ padding: '8px 24px', cursor: 'pointer', width: '100%' }}>登录</button>
       </form>
       <p style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px' }}>
-        普通用户？<Link to="/login">去登录</Link>
+        没有账号？<Link to="/register">去注册</Link>
       </p>
     </div>
   );

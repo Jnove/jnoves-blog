@@ -13,6 +13,8 @@ export interface PostSummary {
   created_at: string;
   updated_at: string;
   comment_count: number;
+  like_count: number;
+  views: number;
 }
 
 export interface Post extends PostSummary {
@@ -25,13 +27,12 @@ export interface Comment {
   author_name: string;
   content: string;
   blog_id: number;
+  user_id: number | null;
   created_at: string;
 }
 
 export interface CommentForm {
   post_id: number;
-  author_name: string;
-  author_email: string;
   content: string;
 }
 
@@ -48,4 +49,31 @@ export interface LoginForm {
 export interface TokenResponse {
   access_token: string;
   token_type: string;
+}
+
+export interface LikeStatus {
+  liked: boolean;
+  like_count: number;
+}
+
+export interface RegisterForm {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface UserInfo {
+  id: number;
+  username: string;
+  email: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface AdminStats {
+  post_count: number;
+  published_count: number;
+  comment_count: number;
+  tag_count: number;
+  total_views: number;
 }

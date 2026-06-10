@@ -20,36 +20,28 @@ logger = logging.getLogger(__name__)
 
 
 def seed_admin():
-    """同步管理员账号：创建或更新为 .env 中配置的用户名/密码，删除其他旧用户"""
+    """同步管理员账号：创建或更新为 .env 中配置的用户名/密码"""
     db = SessionLocal()
     try:
         admin = db.query(User).filter(User.username == ADMIN_USERNAME).first()
         if admin:
-            # 已存在：同步密码和邮箱（防止改了 .env 但数据库没更新）
             new_hash = hash_password(ADMIN_PASSWORD)
-            if admin.password_hash != new_hash or admin.email != ADMIN_EMAIL:
+            if admin.password_hash != new_hash or admin.email != ADMIN_EMAIL or not admin.is_admin:
                 admin.password_hash = new_hash
                 admin.email = ADMIN_EMAIL
+                admin.is_admin = True
                 db.commit()
                 logger.info(f"已同步管理员账号: {ADMIN_USERNAME}")
         else:
-            # 不存在：创建
             admin = User(
                 username=ADMIN_USERNAME,
                 email=ADMIN_EMAIL,
                 password_hash=hash_password(ADMIN_PASSWORD),
+                is_admin=True,
             )
             db.add(admin)
             db.commit()
             logger.info(f"已创建管理员账号: {ADMIN_USERNAME}")
-
-        # 清理其他遗留用户（不同用户名的旧 admin）
-        others = db.query(User).filter(User.username != ADMIN_USERNAME).all()
-        for u in others:
-            db.delete(u)
-            logger.info(f"已清理旧账号: {u.username}")
-        if others:
-            db.commit()
     finally:
         db.close()
 
@@ -91,13 +83,15 @@ app.add_middleware(
 
 
 # 路由注册
-from .routers import auth, posts, comments, tags, search
+from .routers import auth, posts, comments, tags, search, likes, admin
 
 app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(comments.router)
 app.include_router(tags.router)
 app.include_router(search.router)
+app.include_router(likes.router)
+app.include_router(admin.router)
 
 
 @app.get("/api/test", tags=["system"])

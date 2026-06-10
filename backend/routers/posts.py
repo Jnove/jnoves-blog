@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..core.security import get_current_admin
 from ..database import get_db
 from ..models import Blog, Tag, User
-from ..schemas.post import PostCreate, PostUpdate, PostResponse, PostSummary, PostList
+from ..schemas.post import PostCreate, PostUpdate, PostResponse, PostSummary, PostList, TagResponse
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
@@ -36,23 +36,35 @@ def _get_or_create_tags(db: Session, tag_names: list[str]) -> list[Tag]:
 
 
 def _post_to_response(blog: Blog) -> PostResponse:
-    return PostResponse(
-        id=blog.id, title=blog.title, slug=blog.slug,
-        content=blog.content, published=blog.published,
-        author_id=blog.author_id,
-        tags=[{"id": t.id, "name": t.name, "slug": t.slug} for t in blog.tags],
-        created_at=blog.created_at, updated_at=blog.updated_at,
-        comment_count=len(blog.comments),
-    )
+    return PostResponse.model_validate({
+        "id": blog.id,
+        "title": blog.title,
+        "slug": blog.slug,
+        "content": blog.content,
+        "published": blog.published,
+        "author_id": blog.author_id,
+        "tags": [TagResponse.model_validate(t) for t in blog.tags],
+        "created_at": blog.created_at,
+        "updated_at": blog.updated_at,
+        "comment_count": len(blog.comments),
+        "like_count": len(blog.likes),
+        "views": blog.views,
+    })
 
 
 def _post_to_summary(blog: Blog) -> PostSummary:
-    return PostSummary(
-        id=blog.id, title=blog.title, slug=blog.slug, published=blog.published,
-        tags=[{"id": t.id, "name": t.name, "slug": t.slug} for t in blog.tags],
-        created_at=blog.created_at, updated_at=blog.updated_at,
-        comment_count=len(blog.comments),
-    )
+    return PostSummary.model_validate({
+        "id": blog.id,
+        "title": blog.title,
+        "slug": blog.slug,
+        "published": blog.published,
+        "tags": [TagResponse.model_validate(t) for t in blog.tags],
+        "created_at": blog.created_at,
+        "updated_at": blog.updated_at,
+        "comment_count": len(blog.comments),
+        "like_count": len(blog.likes),
+        "views": blog.views,
+    })
 
 
 # ---- 公开端点 ----
@@ -84,6 +96,8 @@ def get_post(slug: str, db: Session = Depends(get_db)):
     blog = db.query(Blog).filter(Blog.slug == slug).first()
     if not blog:
         raise HTTPException(status_code=404, detail="文章不存在")
+    setattr(blog, 'views', blog.views + 1)
+    db.commit()
     return _post_to_response(blog)
 
 
