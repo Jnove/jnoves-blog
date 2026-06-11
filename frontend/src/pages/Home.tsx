@@ -1,91 +1,152 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { postsApi, tagsApi } from '../api/client';
 import PostCard from '../components/PostCard';
 import type { PostSummary, Tag } from '../types';
 
+// 打字机 slogans，按喜好修改 
+const SLOGANS = [
+  '技术在于积累，思考在于沉淀',
+  '把知识写下来，才算真正学会',
+  'Code. Think. Write.',
+  '记录每一个值得记录的瞬间',
+];
+
+// 打字机 Hook 
+function useTypewriter(phrases: string[], typeSpeed = 76, deleteSpeed = 38) {
+  const [displayed, setDisplayed] = useState('');
+  const state = useRef({ idx: 0, charIdx: 0, deleting: false });
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tick = () => {
+      const { idx, charIdx, deleting } = state.current;
+      const phrase = phrases[idx];
+
+      if (!deleting) {
+        const next = charIdx + 1;
+        setDisplayed(phrase.slice(0, next));
+        state.current.charIdx = next;
+        if (next >= phrase.length) {
+          state.current.deleting = true;
+          timer = setTimeout(tick, 2400);   // 停顿后再删
+          return;
+        }
+      } else {
+        const next = charIdx - 1;
+        setDisplayed(phrase.slice(0, next));
+        state.current.charIdx = next;
+        if (next <= 0) {
+          state.current.deleting = false;
+          state.current.idx = (idx + 1) % phrases.length;
+          timer = setTimeout(tick, 500);    // 停顿后再打
+          return;
+        }
+      }
+
+      timer = setTimeout(tick, deleting ? deleteSpeed : typeSpeed);
+    };
+
+    timer = setTimeout(tick, 900);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return displayed;
+}
+
+// Component 
 const PAGE_SIZE = 10;
 
 export default function Home() {
-  const [posts, setPosts] = useState<PostSummary[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const slogan = useTypewriter(SLOGANS);
+
+  const [posts, setPosts]       = useState<PostSummary[]>([]);
+  const [tags, setTags]         = useState<Tag[]>([]);
   const [activeTag, setActiveTag] = useState<string | undefined>();
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [page, setPage]         = useState(1);
+  const [total, setTotal]       = useState(0);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => { tagsApi.list().then(setTags); }, []);
 
   useEffect(() => {
-    tagsApi.list().then(setTags);
-  }, []);
-
-  useEffect(() => {
-    postsApi.list(page, activeTag).then(data => {
-      setPosts(data.items);
-      setTotal(data.total);
-    });
+    setLoading(true);
+    postsApi.list(page, activeTag)
+      .then(data => { setPosts(data.items); setTotal(data.total); })
+      .finally(() => setLoading(false));
   }, [page, activeTag]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  const handleTag = (slug?: string) => {
+    setActiveTag(slug);
+    setPage(1);
+  };
+
   return (
-    <div>
-      <div style={{ marginBottom: '24px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+    <>
+      {/* Hero */}
+      <div className="hero">
+        <div className="hero-title">
+          Jnove<span className="acc">'s</span> blog
+        </div>
+        <div className="hero-slogan">
+          <span>{slogan}</span>
+          <span className="typer-cursor" aria-hidden="true" />
+        </div>
+      </div>
+
+      <div className="divider" />
+
+      {/* Tag filter */}
+      <div className="tag-bar">
         <button
-          onClick={() => { setActiveTag(undefined); setPage(1); }}
-          style={{
-            padding: '4px 12px', borderRadius: '16px', border: '1px solid var(--border)',
-            background: !activeTag ? 'var(--accent-bg)' : 'transparent',
-            cursor: 'pointer', fontSize: '14px',
-          }}
+          className={`tag-pill${!activeTag ? ' active' : ''}`}
+          onClick={() => handleTag(undefined)}
         >
           全部
         </button>
         {tags.map(tag => (
           <button
             key={tag.id}
-            onClick={() => { setActiveTag(tag.slug); setPage(1); }}
-            style={{
-              padding: '4px 12px', borderRadius: '16px', border: '1px solid var(--border)',
-              background: activeTag === tag.slug ? 'var(--accent-bg)' : 'transparent',
-              cursor: 'pointer', fontSize: '14px',
-            }}
+            className={`tag-pill${activeTag === tag.slug ? ' active' : ''}`}
+            onClick={() => handleTag(tag.slug)}
           >
             {tag.name}
           </button>
         ))}
       </div>
-      {posts.length === 0 ? (
-        <p>暂无文章</p>
+
+      {/* Post list */}
+      {loading ? (
+        <p className="text-muted">加载中…</p>
+      ) : posts.length === 0 ? (
+        <p className="text-muted">暂无文章</p>
       ) : (
         posts.map(post => <PostCard key={post.id} post={post} />)
       )}
+
+      {/* Pagination*/}
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '32px', alignItems: 'center' }}>
+        <div className="pagination">
           <button
+            className="btn btn-ghost"
             disabled={page <= 1}
             onClick={() => setPage(p => p - 1)}
-            style={{
-              padding: '8px 20px', borderRadius: '6px', border: '1px solid var(--border)',
-              cursor: page <= 1 ? 'not-allowed' : 'pointer', opacity: page <= 1 ? 0.5 : 1,
-              background: 'var(--bg)', fontSize: '14px',
-            }}
           >
             上一页
           </button>
-          <span style={{ fontSize: '14px', color: 'var(--text)' }}>
-            第 {page} / {totalPages} 页
-          </span>
+          <span className="page-info">第 {page} / {totalPages} 页</span>
           <button
+            className="btn btn-ghost"
             disabled={page >= totalPages}
             onClick={() => setPage(p => p + 1)}
-            style={{
-              padding: '8px 20px', borderRadius: '6px', border: '1px solid var(--border)',
-              cursor: page >= totalPages ? 'not-allowed' : 'pointer', opacity: page >= totalPages ? 0.5 : 1,
-              background: 'var(--bg)', fontSize: '14px',
-            }}
           >
             下一页
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 }

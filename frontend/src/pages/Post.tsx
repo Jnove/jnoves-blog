@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+// frontend/src/pages/Post.tsx
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -9,11 +10,11 @@ import type { Post as PostType, Comment } from '../types';
 
 export default function Post() {
   const { slug } = useParams<{ slug: string }>();
-  const [post, setPost] = useState<PostType | null>(null);
+  const [post, setPost]         = useState<PostType | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked]       = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-  const [liking, setLiking] = useState(false);
+  const [liking, setLiking]     = useState(false);
 
   const token = localStorage.getItem('token');
 
@@ -30,63 +31,69 @@ export default function Post() {
     });
   }, [slug]);
 
-  useEffect(() => {
-    loadComments();
-  }, [loadComments]);
+  useEffect(() => { loadComments(); }, [loadComments]);
 
   const handleToggleLike = async () => {
     if (!post || !token) return;
     setLiking(true);
     try {
-      if (liked) {
-        const res = await likesApi.unlike(post.id);
-        setLiked(res.liked);
-        setLikeCount(res.like_count);
-      } else {
-        const res = await likesApi.like(post.id);
-        setLiked(res.liked);
-        setLikeCount(res.like_count);
-      }
-    } catch {
-      // 静默处理（未登录会被 401 拦截器清 token）
-    } finally {
-      setLiking(false);
-    }
+      const res = liked
+        ? await likesApi.unlike(post.id)
+        : await likesApi.like(post.id);
+      setLiked(res.liked);
+      setLikeCount(res.like_count);
+    } catch { /* 401 handled by interceptor */ }
+    finally { setLiking(false); }
   };
 
-  if (!post) return <p>加载中…</p>;
+  if (!post) return <p className="text-muted" style={{ padding: '24px 0' }}>加载中…</p>;
+
+  const date = new Date(post.created_at).toLocaleDateString('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
 
   return (
-    <article>
-      <h1>{post.title}</h1>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {post.tags.map(tag => (
-          <span key={tag.id} style={{ padding: '2px 8px', background: 'var(--accent-bg)', borderRadius: '4px', fontSize: '13px', color: 'var(--accent)' }}>
-            {tag.name}
-          </span>
-        ))}
+    <article style={{ maxWidth: 720, margin: '0 auto' }}>
+      {/* Header */}
+      <div className="article-header">
+        <h1 className="article-title">{post.title}</h1>
+
+        {/* Tags */}
+        {post.tags.length > 0 && (
+          <div className="post-card-tags" style={{ marginBottom: 12 }}>
+            {post.tags.map(tag => (
+              <span key={tag.id} className="post-tag">{tag.name}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Meta row */}
+        <div className="article-meta">
+          <span>{date}</span>
+          <div className="meta-dot" />
+          <span>{post.views} 次阅读</span>
+
+          {/* Like button */}
+          <button
+            className={`btn-like${liked ? ' liked' : ''}`}
+            onClick={handleToggleLike}
+            disabled={!token || liking}
+            title={token ? (liked ? '取消点赞' : '点赞') : '登录后可点赞'}
+          >
+            {liked ? '❤' : '♡'} {likeCount}
+          </button>
+        </div>
       </div>
-      <div style={{ fontSize: '14px', color: 'var(--text)', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span>{new Date(post.created_at).toLocaleDateString('zh-CN')} · {post.views} 次阅读</span>
-        <button
-          onClick={handleToggleLike}
-          disabled={!token || liking}
-          style={{
-            background: 'none', border: 'none', cursor: token ? 'pointer' : 'default',
-            fontSize: '16px', padding: '4px 8px', borderRadius: '6px',
-            color: liked ? '#e74c3c' : 'var(--text)', opacity: liking ? 0.5 : 1,
-          }}
-          title={token ? (liked ? '取消点赞' : '点赞') : '登录后可点赞'}
-        >
-          {liked ? '❤' : '♡'} {likeCount}
-        </button>
-      </div>
-      <div style={{ lineHeight: 1.8, marginBottom: '48px' }}>
+
+      {/* Body: prose class applies serif font  */}
+      <div className="prose">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {post.content}
         </ReactMarkdown>
       </div>
-      <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '32px 0' }} />
+
+      {/*  Comments */}
+      <hr style={{ border: 'none', borderTop: '1px solid var(--bd)', margin: '40px 0 28px' }} />
       <CommentList comments={comments} />
       <CommentForm postId={post.id} onCommentAdded={loadComments} />
     </article>

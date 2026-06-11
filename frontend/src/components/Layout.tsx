@@ -1,54 +1,89 @@
+// frontend/src/components/Layout.tsx
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+
+type Theme = 'light' | 'dark';
+
+function getInitialTheme(): Theme {
+  // 优先读本地存储，其次跟随系统
+  const stored = localStorage.getItem('theme') as Theme | null;
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 export default function Layout() {
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
+  // 把 data-theme 写到 <html>，让 CSS 变量全局生效
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
 
   const handleAdminClick = () => {
-    if (isAdmin) {
-      navigate('/admin');
-    } else if (!isAuthenticated) {
-      navigate('/login');
-    } else {
-      navigate('/');
-    }
+    if (isAdmin) navigate('/admin');
+    else if (!isAuthenticated) navigate('/admin/login');
   };
 
   return (
     <div>
-      <header style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '24px', alignItems: 'center' }}>
-        <Link to="/" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '20px', color: 'var(--text-h)' }}>
-          Jnove&apos;s Blog
+      {/* ── Navigation ── */}
+      <header className="nav">
+        <Link to="/" className="nav-logo">
+          Jnove<span className="dot">.</span>blog
         </Link>
-        <nav style={{ display: 'flex', gap: '16px', flex: 1 }}>
-          <Link to="/">首页</Link>
-          <Link to="/about">关于</Link>
-          <Link to="/search">搜索</Link>
-          {isAdmin && <Link to="/admin">仪表盘</Link>}
-        </nav>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '14px' }}>
+
+        <nav className="nav-links">
+          <Link to="/" className="nav-link">首页</Link>
+          <Link to="/about" className="nav-link">关于</Link>
+          <Link to="/search" className="nav-link">搜索</Link>
+          {isAdmin && <Link to="/admin" className="nav-link">仪表盘</Link>}
+
           {isAuthenticated ? (
             <>
-              <span style={{ color: 'var(--text)' }}>你好, {user?.username}</span>
-              <button onClick={logout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', opacity: 0.6 }}>
+              <span className="nav-link" style={{ cursor: 'default', opacity: 0.7 }}>
+                {user?.username}
+              </span>
+              <button
+                onClick={logout}
+                className="nav-link"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+              >
                 退出
               </button>
             </>
           ) : (
             <>
-              <Link to="/login">登录</Link>
+              <Link to="/login" className="nav-link">登录</Link>
               <button
                 onClick={handleAdminClick}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', opacity: 0.6, fontSize: '14px' }}
+                className="nav-link"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
               >
                 管理
               </button>
             </>
           )}
-        </div>
+
+          {/* Theme toggle */}
+          <button
+            className="btn-theme"
+            onClick={toggleTheme}
+            aria-label={theme === 'light' ? '切换深色模式' : '切换浅色模式'}
+            title={theme === 'light' ? '切换深色模式' : '切换浅色模式'}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+        </nav>
       </header>
-      <main style={{ padding: '24px' }}>
+
+      {/* ── Page content ── */}
+      <main>
         <Outlet />
       </main>
     </div>

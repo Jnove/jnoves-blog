@@ -30,7 +30,7 @@ def search_posts(
             id=b.id, title=b.title, slug=b.slug, published=b.published,
             tags=[{"id": t.id, "name": t.name, "slug": t.slug} for t in b.tags],
             created_at=b.created_at, updated_at=b.updated_at,
-            comment_count=len(b.comments),
+            comment_count=len(b.comments), like_count=len(b.likes), views=b.views,
         )
         for b in blogs
     ]
