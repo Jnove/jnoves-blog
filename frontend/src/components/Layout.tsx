@@ -1,12 +1,13 @@
-// frontend/src/components/Layout.tsx
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ProgressBar from './ProgressBar';
+import BackToTop from './BackToTop';
+import Footer from './Footer';
 
 type Theme = 'light' | 'dark';
 
 function getInitialTheme(): Theme {
-  // 优先读本地存储，其次跟随系统
   const stored = localStorage.getItem('theme') as Theme | null;
   if (stored === 'light' || stored === 'dark') return stored;
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -17,7 +18,6 @@ export default function Layout() {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
-  // 把 data-theme 写到 <html>，让 CSS 变量全局生效
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -32,10 +32,12 @@ export default function Layout() {
 
   return (
     <div>
-      {/* ── Navigation ── */}
+      {/* Reading progress bar */}
+      <ProgressBar />
+
       <header className="nav">
         <Link to="/" className="nav-logo">
-          Jnove<span className="dot">.</span>blog
+          Jnove<span className="acc">'s</span> blog
         </Link>
 
         <nav className="nav-links">
@@ -70,7 +72,6 @@ export default function Layout() {
             </>
           )}
 
-          {/* Theme toggle */}
           <button
             className="btn-theme"
             onClick={toggleTheme}
@@ -82,10 +83,14 @@ export default function Layout() {
         </nav>
       </header>
 
-      {/* ── Page content ── */}
       <main>
         <Outlet />
       </main>
+
+      {/* Back to top */}
+      <BackToTop />
+
+      <Footer />
     </div>
   );
 }

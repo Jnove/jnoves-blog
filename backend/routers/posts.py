@@ -1,4 +1,6 @@
 """文章路由：公开只读，Admin 可写"""
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,6 @@ router = APIRouter(prefix="/api/posts", tags=["posts"])
 
 def _slugify(text: str) -> str:
     """简单 URL slug 生成（无外部依赖）"""
-    import re
     text = text.lower().strip()
     text = re.sub(r'[^\w\s-]', '', text)
     text = re.sub(r'[-\s]+', '-', text)
@@ -41,8 +42,11 @@ def _post_to_response(blog: Blog) -> PostResponse:
         "title": blog.title,
         "slug": blog.slug,
         "content": blog.content,
+        "format": blog.format,
         "published": blog.published,
         "author_id": blog.author_id,
+        "summary": blog.summary,
+        "cover_image": blog.cover_image,
         "tags": [TagResponse.model_validate(t) for t in blog.tags],
         "created_at": blog.created_at,
         "updated_at": blog.updated_at,
@@ -52,12 +56,41 @@ def _post_to_response(blog: Blog) -> PostResponse:
     })
 
 
+def _strip_markdown(text: str, max_len: int = 200) -> str:
+    """简单去除 Markdown 标记，截取前 N 字符作为摘要"""
+    # 去掉标题、粗斜体、链接、图片、代码块等
+    text = re.sub(r'#{1,6}\s+', '', text)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'\*([^*]+)\*', r'\1', text)
+    text = re.sub(r'!\[.*?\]\(.*?\)', '', text)
+    text = re.sub(r'\[([^\]]*)\]\(.*?\)', r'\1', text)
+    text = re.sub(r'`{1,3}[^`]*`{1,3}', '', text)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\n+', ' ', text)
+    text = text.strip()
+    if len(text) > max_len:
+        text = text[:max_len].rsplit(' ', 1)[0] + '…'
+    return text
+
+
+def _reading_time(text: str) -> int:
+    """估算阅读时间，中文 ~350 字/分钟，最少 1 分钟"""
+    # 去除空白后统计有效字符
+    chars = len(re.sub(r'\s+', '', text))
+    return max(1, round(chars / 350))
+
+
 def _post_to_summary(blog: Blog) -> PostSummary:
     return PostSummary.model_validate({
         "id": blog.id,
         "title": blog.title,
         "slug": blog.slug,
         "published": blog.published,
+        "format": blog.format,
+        "summary": blog.summary,
+        "cover_image": blog.cover_image,
+        "excerpt": _strip_markdown(blog.content, 180),
+        "reading_time": _reading_time(blog.content),
         "tags": [TagResponse.model_validate(t) for t in blog.tags],
         "created_at": blog.created_at,
         "updated_at": blog.updated_at,
@@ -96,7 +129,7 @@ def get_post(slug: str, db: Session = Depends(get_db)):
     blog = db.query(Blog).filter(Blog.slug == slug).first()
     if not blog:
         raise HTTPException(status_code=404, detail="文章不存在")
-    setattr(blog, 'views', blog.views + 1)
+    blog.views += 1
     db.commit()
     return _post_to_response(blog)
 

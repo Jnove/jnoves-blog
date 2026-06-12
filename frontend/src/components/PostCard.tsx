@@ -8,8 +8,28 @@ export default function PostCard({ post }: { post: PostSummary }) {
 
   return (
     <Link to={`/post/${post.slug}`} className="post-card">
-      {/* Title */}
-      <div className="post-card-title">{post.title}</div>
+      <div className="post-card-body">
+        {/* Title + summary */}
+        <div className="post-card-text">
+          <div className="post-card-title">{post.title}</div>
+          {post.summary && (
+            <div className="post-card-summary">{post.summary}</div>
+          )}
+          {!post.summary && post.excerpt && (
+            <div className="post-card-excerpt">{post.excerpt}</div>
+          )}
+        </div>
+
+        {/* Cover image thumbnail */}
+        {post.cover_image && (
+          <img
+            className="post-card-thumb"
+            src={post.cover_image}
+            alt=""
+            loading="lazy"
+          />
+        )}
+      </div>
 
       {/* Tags */}
       {post.tags.length > 0 && (
@@ -20,9 +40,11 @@ export default function PostCard({ post }: { post: PostSummary }) {
         </div>
       )}
 
-      {/* Meta — views / comments / likes */}
+      {/* Meta */}
       <div className="post-card-meta">
         <span>{date}</span>
+        <div className="meta-dot" />
+        <span>{post.reading_time} 分钟阅读</span>
         <div className="meta-dot" />
         <span>{post.views} 阅读</span>
         {post.comment_count > 0 && (

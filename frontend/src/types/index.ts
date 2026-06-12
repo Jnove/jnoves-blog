@@ -9,6 +9,11 @@ export interface PostSummary {
   title: string;
   slug: string;
   published: boolean;
+  format: string;
+  summary: string | null;
+  cover_image: string | null;
+  excerpt: string;
+  reading_time: number;
   tags: Tag[];
   created_at: string;
   updated_at: string;
@@ -28,12 +33,17 @@ export interface Comment {
   content: string;
   blog_id: number;
   user_id: number | null;
+  parent_id: number | null;
+  quote: string | null;
+  replies: Comment[];
   created_at: string;
 }
 
 export interface CommentForm {
   post_id: number;
   content: string;
+  parent_id?: number;
+  quote?: string;
 }
 
 export interface PostList {
@@ -67,7 +77,17 @@ export interface UserInfo {
   username: string;
   email: string;
   is_admin: boolean;
+  avatar_url: string | null;
   created_at: string;
+}
+
+export interface UploadResponse {
+  url: string;
+  filename: string;
+}
+
+export interface GitHubUrlResponse {
+  url: string;
 }
 
 export interface AdminStats {
@@ -76,4 +96,26 @@ export interface AdminStats {
   comment_count: number;
   tag_count: number;
   total_views: number;
+}
+
+export interface AdminComment {
+  id: number;
+  author_name: string;
+  content: string;
+  blog_id: number;
+  blog_title: string;
+  blog_slug: string;
+  user_id: number | null;
+  created_at: string;
+}
+
+export interface AdminCommentList {
+  items: AdminComment[];
+  total: number;
+}
+
+export interface AboutContent {
+  id: number;
+  content: string;
+  updated_at: string | null;
 }

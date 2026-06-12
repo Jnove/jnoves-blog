@@ -23,3 +23,5 @@ frontend/dist/
 *.md
 !*README*.md
 /docs
+/uploads
+.*

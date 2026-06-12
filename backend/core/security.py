@@ -14,6 +14,7 @@ from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
+optional_bearer = HTTPBearer(auto_error=False)  # 游客场景：无 token 不抛 401
 
 
 def hash_password(password: str) -> str:
@@ -86,7 +87,7 @@ def get_current_user(
 
 
 def get_optional_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
     db: Session = Depends(get_db),
 ) -> Optional[User]:
     """可选认证——有 token 则验证，没有则返回 None，不抛 401。"""

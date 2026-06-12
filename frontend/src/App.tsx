@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import AdminLogin from './pages/AdminLogin';
 import AdminEditor from './pages/AdminEditor';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminAbout from './pages/AdminAbout';
 import Search from './pages/Search';
 import About from './pages/About';
 
@@ -22,10 +23,11 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/editor" element={<AdminRoute><AdminEditor /></AdminRoute>} />
+          <Route path="/admin/about" element={<AdminRoute><AdminAbout /></AdminRoute>} />
         </Route>
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/editor" element={<AdminRoute><AdminEditor /></AdminRoute>} />
-        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Text, ForeignKey, Boolean,
-    UniqueConstraint, Index, DateTime, Table
+    Index, DateTime, Table
 )
 from sqlalchemy.orm import relationship
 
@@ -46,7 +46,10 @@ class User(Base, TimestampMixin):
     username = Column(String(50), unique=True, index=True, nullable=False, comment="用户名")
     email = Column(String(255), unique=True, index=True, nullable=False, comment="邮箱")
     is_admin = Column(Boolean, default=False, nullable=False, comment="是否为管理员")
-    password_hash = Column(String(255), nullable=False, comment="加密后的密码")
+    password_hash = Column(String(255), nullable=True, comment="加密后的密码（OAuth 用户可为空）")
+    oauth_provider = Column(String(20), nullable=True, comment="OAuth 提供商（如 github）")
+    oauth_id = Column(String(100), nullable=True, index=True, comment="OAuth 用户 ID")
+    avatar_url = Column(String(500), nullable=True, comment="头像 URL")
 
     blogs = relationship(
         "Blog", back_populates="author",
@@ -77,6 +80,9 @@ class Blog(Base, TimestampMixin):
         comment="URL 友好的唯一标识"
     )
     content = Column(Text, nullable=False, comment="博客正文（Markdown/Typst）")
+    format = Column(String(10), default="markdown", nullable=False, comment="渲染格式：markdown 或 typst")
+    summary = Column(String(300), nullable=True, comment="一句话总结")
+    cover_image = Column(String(500), nullable=True, comment="封面图片 URL")
     published = Column(Boolean, default=False, nullable=False, comment="是否公开发布")
     views = Column(Integer, default=0, nullable=False, comment="浏览量")
     author_id = Column(
@@ -121,6 +127,25 @@ class Tag(Base, TimestampMixin):
         return f"<Tag(id={self.id}, name={self.name!r})>"
 
 
+# ---------- 关于页 ----------
+
+class AboutPage(Base):
+    __tablename__ = "about_page"
+
+    id = Column(Integer, primary_key=True, default=1, comment="固定 ID=1，单行记录")
+    content = Column(Text, default="", nullable=False, comment="关于页内容（Markdown）")
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="最后更新时间"
+    )
+
+    def __repr__(self):
+        return "<AboutPage id=1>"
+
+
 # ---------- 评论 ----------
 
 class Comment(Base, TimestampMixin):
@@ -144,9 +169,18 @@ class Comment(Base, TimestampMixin):
         index=True,
         comment="关联注册用户ID（可为空）"
     )
+    parent_id = Column(
+        Integer,
+        ForeignKey("comments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        comment="父评论ID（嵌套回复）"
+    )
+    quote = Column(Text, nullable=True, comment="引用内容（划线/引用回复）")
 
     blog = relationship("Blog", back_populates="comments", lazy="select")
     user = relationship("User", back_populates="comments", lazy="select")
+    parent = relationship("Comment", remote_side="Comment.id", backref="replies", lazy="select")
 
     def __repr__(self):
         return f"<Comment(id={self.id}, blog_id={self.blog_id})>"
@@ -161,8 +195,12 @@ class Like(Base, TimestampMixin):
     user_id = Column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="点赞用户ID"
+        nullable=True,
+        comment="点赞用户ID（登录用户）"
+    )
+    ip_address = Column(
+        String(45), nullable=True, index=True,
+        comment="点赞者 IP 地址（未登录用户）"
     )
     blog_id = Column(
         Integer,
@@ -175,10 +213,10 @@ class Like(Base, TimestampMixin):
     blog = relationship("Blog", back_populates="likes", lazy="select")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "blog_id", name="uq_user_blog_like"),
         Index("ix_likes_user_id", "user_id"),
         Index("ix_likes_blog_id", "blog_id"),
+        Index("ix_likes_ip_blog", "ip_address", "blog_id"),
     )
 
     def __repr__(self):
-        return f"<Like(user_id={self.user_id}, blog_id={self.blog_id})>"
+        return f"<Like(id={self.id}, blog_id={self.blog_id})>"

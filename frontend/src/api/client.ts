@@ -1,8 +1,8 @@
 import axios from 'axios';
-import type { Post, PostList, Comment, CommentForm, LoginForm, RegisterForm, TokenResponse, Tag, PostSummary, LikeStatus, UserInfo, AdminStats } from '../types';
+import type { Post, PostList, Comment, CommentForm, LoginForm, RegisterForm, TokenResponse, Tag, PostSummary, LikeStatus, UserInfo, AdminStats, AdminCommentList, AboutContent, GitHubUrlResponse, UploadResponse } from '../types';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: '/api',
   timeout: 10000,
 });
 
@@ -75,6 +75,22 @@ export const authApi = {
 
   me: () =>
     api.get<UserInfo>('/auth/me').then(r => r.data),
+
+  githubUrl: () =>
+    api.get<GitHubUrlResponse>('/auth/github/url').then(r => r.data),
+
+  githubCallback: (code: string) =>
+    api.get<TokenResponse>('/auth/github/callback', { params: { code } }).then(r => r.data),
+};
+
+export const uploadApi = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<UploadResponse>('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+  },
 };
 
 export const likesApi = {
@@ -91,4 +107,18 @@ export const likesApi = {
 export const adminApi = {
   stats: () =>
     api.get<AdminStats>('/admin/stats').then(r => r.data),
+
+  comments: (page = 1) =>
+    api.get<AdminCommentList>('/admin/comments', { params: { page, size: 20 } }).then(r => r.data),
+
+  deleteComment: (id: number) =>
+    api.delete(`/admin/comments/${id}`),
+};
+
+export const aboutApi = {
+  get: () =>
+    api.get<AboutContent>('/about').then(r => r.data),
+
+  update: (content: string) =>
+    api.put<AboutContent>('/about', { content }).then(r => r.data),
 };

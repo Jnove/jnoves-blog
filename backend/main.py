@@ -3,10 +3,13 @@ FastAPI 应用入口
 启动时自动建表并创建管理员账号（仅开发环境），
 注册中间件、路由，管理数据库生命周期。
 """
+import os
+import uuid
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .database import engine, Base, SessionLocal
 from . import models
@@ -83,7 +86,7 @@ app.add_middleware(
 
 
 # 路由注册
-from .routers import auth, posts, comments, tags, search, likes, admin
+from .routers import auth, posts, comments, tags, search, likes, admin, about
 
 app.include_router(auth.router)
 app.include_router(posts.router)
@@ -92,6 +95,31 @@ app.include_router(tags.router)
 app.include_router(search.router)
 app.include_router(likes.router)
 app.include_router(admin.router)
+app.include_router(about.router)
+
+
+# 上传目录
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
+
+
+@app.post("/api/upload", tags=["system"])
+async def upload_image(file: UploadFile = File(...)):
+    """上传图片，返回访问 URL"""
+    ext = os.path.splitext(file.filename or "image.png")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"不支持的图片格式：{ext}")
+    # 限制 5MB
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="图片大小不能超过 5MB")
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+    return {"url": f"/uploads/{filename}", "filename": filename}
 
 
 @app.get("/api/test", tags=["system"])
@@ -102,6 +130,9 @@ async def test_api():
         "message": "你好，React！我是 FastAPI 后端！",
     }
 
+
+# 静态文件挂载（必须在路由之后，否则会拦截 API 请求）
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 if __name__ == "__main__":
     import uvicorn

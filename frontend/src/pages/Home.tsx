@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { postsApi, tagsApi } from '../api/client';
 import PostCard from '../components/PostCard';
+import HomeSidebar from '../components/HomeSidebar';
 import type { PostSummary, Tag } from '../types';
 
 // 打字机 slogans，按喜好修改 
@@ -39,7 +40,7 @@ function useTypewriter(phrases: string[], typeSpeed = 76, deleteSpeed = 38) {
         if (next <= 0) {
           state.current.deleting = false;
           state.current.idx = (idx + 1) % phrases.length;
-          timer = setTimeout(tick, 500);    // 停顿后再打
+          timer = setTimeout(tick, 800);    // 停顿后再打
           return;
         }
       }
@@ -99,54 +100,61 @@ export default function Home() {
 
       <div className="divider" />
 
-      {/* Tag filter */}
-      <div className="tag-bar">
-        <button
-          className={`tag-pill${!activeTag ? ' active' : ''}`}
-          onClick={() => handleTag(undefined)}
-        >
-          全部
-        </button>
-        {tags.map(tag => (
-          <button
-            key={tag.id}
-            className={`tag-pill${activeTag === tag.slug ? ' active' : ''}`}
-            onClick={() => handleTag(tag.slug)}
-          >
-            {tag.name}
-          </button>
-        ))}
-      </div>
+      <div className="home-layout">
+        <div className="home-main">
+          {/* Tag filter */}
+          <div className="tag-bar">
+            <button
+              className={`tag-pill${!activeTag ? ' active' : ''}`}
+              onClick={() => handleTag(undefined)}
+            >
+              全部
+            </button>
+            {tags.map(tag => (
+              <button
+                key={tag.id}
+                className={`tag-pill${activeTag === tag.slug ? ' active' : ''}`}
+                onClick={() => handleTag(tag.slug)}
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
 
-      {/* Post list */}
-      {loading ? (
-        <p className="text-muted">加载中…</p>
-      ) : posts.length === 0 ? (
-        <p className="text-muted">暂无文章</p>
-      ) : (
-        posts.map(post => <PostCard key={post.id} post={post} />)
-      )}
+          {/* Post list */}
+          {loading ? (
+            <div>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton skeleton-card">
+                  <div style={{ padding: '20px 22px' }}>
+                    <div className="skeleton skeleton-line" style={{ width: '50%' }} />
+                    <div className="skeleton skeleton-line" style={{ width: '90%' }} />
+                    <div className="skeleton skeleton-line skeleton-line-short" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📝</div>
+              <div className="empty-state-text">暂无文章</div>
+            </div>
+          ) : (
+            posts.map(post => <PostCard key={post.id} post={post} />)
+          )}
 
-      {/* Pagination*/}
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="btn btn-ghost"
-            disabled={page <= 1}
-            onClick={() => setPage(p => p - 1)}
-          >
-            上一页
-          </button>
-          <span className="page-info">第 {page} / {totalPages} 页</span>
-          <button
-            className="btn btn-ghost"
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => p + 1)}
-          >
-            下一页
-          </button>
+          {/* Pagination*/}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</button>
+              <span className="page-info">第 {page} / {totalPages} 页</span>
+              <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>下一页</button>
+            </div>
+          )}
         </div>
-      )}
+
+        <HomeSidebar />
+      </div>
     </>
   );
 }
