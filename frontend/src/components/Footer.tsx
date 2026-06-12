@@ -8,8 +8,10 @@ export default function Footer() {
         </div>
         <div className="footer-links">
           <a href="/" className="footer-link">首页</a>
+          <a href="/archive" className="footer-link">归档</a>
           <a href="/about" className="footer-link">关于</a>
           <a href="/search" className="footer-link">搜索</a>
+          <a href="/api/feed/rss" className="footer-link" title="复制此链接到 RSS 阅读器即可订阅博客更新">RSS 订阅</a>
         </div>
         <div className="footer-copy">
           <p>Built with FastAPI + React</p>

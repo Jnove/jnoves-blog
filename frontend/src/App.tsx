@@ -10,6 +10,7 @@ import AdminEditor from './pages/AdminEditor';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAbout from './pages/AdminAbout';
 import Search from './pages/Search';
+import Archive from './pages/Archive';
 import About from './pages/About';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/post/:slug" element={<Post />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/archive" element={<Archive />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

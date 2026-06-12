@@ -102,6 +102,38 @@ def _post_to_summary(blog: Blog) -> PostSummary:
 
 # ---- 公开端点 ----
 
+@router.get("/archive")
+def archive_posts(db: Session = Depends(get_db)):
+    """文章归档：按年月分组，返回分组列表"""
+    posts = (
+        db.query(Blog)
+        .filter(Blog.published == True)
+        .order_by(Blog.created_at.desc())
+        .all()
+    )
+
+    groups: dict[str, list] = {}
+    for blog in posts:
+        key = blog.created_at.strftime("%Y-%m")
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(_post_to_summary(blog))
+
+    # 转为按时间倒序的列表
+    result = []
+    for key in sorted(groups.keys(), reverse=True):
+        year, month = key.split("-")
+        result.append({
+            "year": int(year),
+            "month": int(month),
+            "label": f"{year}年{int(month)}月",
+            "count": len(groups[key]),
+            "posts": groups[key],
+        })
+
+    return result
+
+
 @router.get("", response_model=PostList)
 def list_posts(
     page: int = Query(1, ge=1),
@@ -132,6 +164,36 @@ def get_post(slug: str, db: Session = Depends(get_db)):
     blog.views += 1
     db.commit()
     return _post_to_response(blog)
+
+
+@router.get("/{slug}/related", response_model=list[PostSummary])
+def related_posts(slug: str, db: Session = Depends(get_db)):
+    """根据标签重叠度推荐相关文章，最多 4 篇"""
+    blog = db.query(Blog).filter(Blog.slug == slug, Blog.published == True).first()
+    if not blog:
+        return []
+
+    tag_ids = [t.id for t in blog.tags]
+    if not tag_ids:
+        return []
+
+    # 找到有相同标签的已发布文章，排除自身
+    from sqlalchemy import func
+    related = (
+        db.query(Blog, func.count(Blog.id).label("overlap"))
+        .join(Blog.tags)
+        .filter(
+            Blog.published == True,
+            Blog.id != blog.id,
+            Tag.id.in_(tag_ids),
+        )
+        .group_by(Blog.id)
+        .order_by(func.count(Blog.id).desc(), Blog.created_at.desc())
+        .limit(4)
+        .all()
+    )
+
+    return [_post_to_summary(b) for b, _ in related]
 
 
 # ---- Admin 端点 ----

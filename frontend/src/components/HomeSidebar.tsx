@@ -2,6 +2,43 @@ import { useEffect, useState } from 'react';
 import { tagsApi } from '../api/client';
 import type { Tag } from '../types';
 
+function RssCard() {
+  const [copied, setCopied] = useState(false);
+  const feedUrl = '/api/feed/rss';
+
+  const handleCopy = async () => {
+    const fullUrl = window.location.origin + feedUrl;
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = fullUrl;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="sidebar-card">
+      <h4 className="sidebar-label">订阅更新</h4>
+      <p style={{ fontSize: 12.5, color: 'var(--txt2)', lineHeight: 1.6, marginBottom: 8 }}>
+        复制链接到 RSS 阅读器，新文章自动推送
+      </p>
+      <button
+        className="btn btn-ghost"
+        onClick={handleCopy}
+        style={{ width: '100%', fontSize: 12.5, padding: '6px 10px' }}
+      >
+        {copied ? '✓ 已复制' : '📡 复制订阅链接'}
+      </button>
+    </div>
+  );
+}
+
 export default function HomeSidebar() {
   const [tags, setTags] = useState<Tag[]>([]);
 
@@ -24,6 +61,9 @@ export default function HomeSidebar() {
           <button type="submit" className="btn btn-primary" style={{ padding: '7px 14px', fontSize: 13 }}>搜索</button>
         </form>
       </div>
+
+      {/* RSS */}
+      <RssCard />
 
       {/* Tag cloud */}
       {tags.length > 0 && (

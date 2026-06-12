@@ -7,11 +7,12 @@ import { useAuth } from '../contexts/AuthContext';
 import CommentList from '../components/CommentList';
 import CommentForm from '../components/CommentForm';
 import CodeBlock from '../components/CodeBlock';
+import ShareBar from '../components/ShareBar';
 import TableOfContents from '../components/TableOfContents';
 
 const TypstBody = lazy(() => import('../components/TypstRenderer'));
 import { useIsDark } from '../hooks/useIsDark';
-import type { Post as PostType, Comment } from '../types';
+import type { Post as PostType, PostSummary, Comment } from '../types';
 
 function headingId(text: string): string {
   return text
@@ -31,6 +32,7 @@ export default function Post() {
   const [likeCount, setLikeCount] = useState(0);
   const [liking, setLiking]     = useState(false);
   const [replyTarget, setReplyTarget] = useState<{ id: number; author: string; text: string } | null>(null);
+  const [related, setRelated] = useState<PostSummary[]>([]);
   const onReplyClick = (id: number, author: string, text: string) => setReplyTarget({ id, author, text });
 
   const loadComments = useCallback(() => {
@@ -44,6 +46,7 @@ export default function Post() {
       setLikeCount(p.like_count ?? 0);
       likesApi.check(p.id).then(s => setLiked(s.liked));
     });
+    postsApi.related(slug).then(setRelated);
   }, [slug]);
 
   useEffect(() => { loadComments(); }, [loadComments]);
@@ -114,6 +117,7 @@ export default function Post() {
               {liked ? '❤' : '♡'} {likeCount}
             </button>
           </div>
+          <ShareBar title={post.title} slug={post.slug} />
         </div>
 
         {/* Body — 根据 format 切换渲染引擎 */}
@@ -145,6 +149,41 @@ export default function Post() {
         )}
 
         <hr style={{ border: 'none', borderTop: '1px solid var(--bd)', margin: '40px 0 28px' }} />
+
+        {/* Related posts */}
+        {related.length > 0 && (
+          <section style={{ marginBottom: 32 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 530, color: 'var(--txt)', marginBottom: 14 }}>相关文章</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {related.map(r => (
+                <Link
+                  key={r.id}
+                  to={`/post/${r.slug}`}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--bd)', background: 'var(--surf)',
+                    textDecoration: 'none', transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--acc)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--bd)';
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
+                  <span style={{ fontSize: 14, color: 'var(--txt)', fontWeight: 500 }}>{r.title}</span>
+                  <span style={{ fontSize: 12, color: 'var(--txt2)', flexShrink: 0, marginLeft: 12 }}>
+                    {new Date(r.created_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         <CommentList comments={comments} replyTarget={replyTarget} onReplyClick={onReplyClick} />
         <CommentForm postId={post.id} onCommentAdded={loadComments} replyTarget={replyTarget} onCancelReply={() => setReplyTarget(null)} />
       </article>

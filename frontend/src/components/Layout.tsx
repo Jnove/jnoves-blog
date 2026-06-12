@@ -42,6 +42,7 @@ export default function Layout() {
 
         <nav className="nav-links">
           <Link to="/" className="nav-link">首页</Link>
+          <Link to="/archive" className="nav-link">归档</Link>
           <Link to="/about" className="nav-link">关于</Link>
           <Link to="/search" className="nav-link">搜索</Link>
           {isAdmin && <Link to="/admin" className="nav-link">仪表盘</Link>}

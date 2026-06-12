@@ -86,7 +86,7 @@ app.add_middleware(
 
 
 # 路由注册
-from .routers import auth, posts, comments, tags, search, likes, admin, about
+from .routers import auth, posts, comments, tags, search, likes, admin, about, feed
 
 app.include_router(auth.router)
 app.include_router(posts.router)
@@ -96,6 +96,7 @@ app.include_router(search.router)
 app.include_router(likes.router)
 app.include_router(admin.router)
 app.include_router(about.router)
+app.include_router(feed.router)
 
 
 # 上传目录

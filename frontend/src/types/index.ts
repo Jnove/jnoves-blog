@@ -114,6 +114,14 @@ export interface AdminCommentList {
   total: number;
 }
 
+export interface ArchiveGroup {
+  year: number;
+  month: number;
+  label: string;
+  count: number;
+  posts: PostSummary[];
+}
+
 export interface AboutContent {
   id: number;
   content: string;

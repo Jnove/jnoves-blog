@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Post, PostList, Comment, CommentForm, LoginForm, RegisterForm, TokenResponse, Tag, PostSummary, LikeStatus, UserInfo, AdminStats, AdminCommentList, AboutContent, GitHubUrlResponse, UploadResponse } from '../types';
+import type { Post, PostList, Comment, CommentForm, LoginForm, RegisterForm, TokenResponse, Tag, PostSummary, LikeStatus, UserInfo, AdminStats, AdminCommentList, ArchiveGroup, AboutContent, GitHubUrlResponse, UploadResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -37,6 +37,12 @@ export const postsApi = {
 
   get: (slug: string) =>
     api.get<Post>(`/posts/${slug}`).then(r => r.data),
+
+  related: (slug: string) =>
+    api.get<PostSummary[]>(`/posts/${slug}/related`).then(r => r.data),
+
+  archive: () =>
+    api.get<ArchiveGroup[]>('/posts/archive').then(r => r.data),
 
   create: (data: Record<string, unknown>) =>
     api.post<Post>('/posts', data).then(r => r.data),
